@@ -15,23 +15,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
-        const activityCard = document.createElement("div");
-        activityCard.className = "activity-card";
+          const activityCard = document.createElement("div");
+          activityCard.className = "activity-card";
 
-        const spotsLeft = details.max_participants - details.participants.length;
+          const spotsLeft = details.max_participants - details.participants.length;
 
-        activityCard.innerHTML = `
-          <h4>${name}</h4>
-          <p>${details.description}</p>
-          <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
-          <p><strong>Participants:</strong></p>
-          <ul class="participants">
-            ${details.participants.map(participant => `<li>${participant}</li>`).join('')}
-          </ul>
-        `;
+          // Header and description
+          const title = document.createElement("h4");
+          title.textContent = name;
 
-        activitiesList.appendChild(activityCard);
+          const desc = document.createElement("p");
+          desc.textContent = details.description;
+
+          const schedule = document.createElement("p");
+          schedule.innerHTML = `<strong>Schedule:</strong> ${details.schedule}`;
+
+          const availability = document.createElement("p");
+          availability.innerHTML = `<strong>Availability:</strong> ${spotsLeft} spots left`;
+
+          const participantsLabel = document.createElement("p");
+          participantsLabel.innerHTML = `<strong>Participants:</strong>`;
+
+          const ul = document.createElement("ul");
+          ul.className = "participants";
+
+          // Populate participants with delete button
+          details.participants.forEach((participant) => {
+            const li = document.createElement("li");
+
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "participant-name";
+            nameSpan.textContent = participant;
+
+            const delButton = document.createElement("button");
+            delButton.className = "participant-delete";
+            delButton.setAttribute("aria-label", `Unregister ${participant}`);
+            delButton.textContent = "🗑️";
+
+            // Click handler to unregister participant
+            delButton.addEventListener("click", async () => {
+              if (!confirm(`Unregister ${participant} from ${name}?`)) return;
+
+              try {
+                const resp = await fetch(
+                  `/activities/${encodeURIComponent(name)}/unregister?email=${encodeURIComponent(participant)}`,
+                  { method: "DELETE" }
+                );
+
+                const result = await resp.json();
+
+                if (resp.ok) {
+                  // Refresh activities to update UI
+                  fetchActivities();
+                } else {
+                  console.error("Failed to unregister:", result);
+                  alert(result.detail || "Failed to unregister participant");
+                }
+              } catch (err) {
+                console.error("Error unregistering:", err);
+                alert("Error unregistering participant. Check console for details.");
+              }
+            });
+
+            li.appendChild(nameSpan);
+            li.appendChild(delButton);
+            ul.appendChild(li);
+          });
+
+          // Assemble card
+          activityCard.appendChild(title);
+          activityCard.appendChild(desc);
+          activityCard.appendChild(schedule);
+          activityCard.appendChild(availability);
+          activityCard.appendChild(participantsLabel);
+          activityCard.appendChild(ul);
+
+          activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
         const option = document.createElement("option");
